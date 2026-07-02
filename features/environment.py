@@ -26,6 +26,19 @@ def before_scenario(context, scenario):
 
 
 def after_scenario(context, scenario):
+    if scenario.status == "failed":
+        os.makedirs("evidencias", exist_ok=True)
+
+        file_name = "".join(
+            c if c.isalnum() or c in (" ", "_", "-") else "_"
+            for c in scenario.name
+        ).replace(" ", "_")
+
+        context.page.screenshot(
+            path=f"evidencias/{file_name}.png",
+            full_page=True
+        )
+
     context.page.close()
 
 
