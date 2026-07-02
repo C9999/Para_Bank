@@ -1,4 +1,4 @@
-name: CI - ParaBank E2E
+name: ParaBank E2E Tests
 
 on:
   push:
@@ -16,24 +16,24 @@ permissions:
   pages: write
   id-token: write
 
-concurrency:
-  group: pages
-  cancel-in-progress: true
-
 jobs:
-  tests:
+
+  e2e:
+
     runs-on: ubuntu-latest
+
     timeout-minutes: 30
 
     steps:
-      - name: Checkout repository
+
+      - name: Checkout
         uses: actions/checkout@v4
 
       - name: Setup Python
         uses: actions/setup-python@v5
         with:
           python-version: "3.13"
-          cache: "pip"
+          cache: pip
 
       - name: Setup Java
         uses: actions/setup-java@v4
@@ -41,35 +41,52 @@ jobs:
           distribution: temurin
           java-version: "17"
 
-      - name: Install dependencies
+      - name: Cache Playwright Browsers
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}
+
+      - name: Install Dependencies
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
-      - name: Install Playwright
+      - name: Install Playwright Browsers
         run: |
-          playwright install --with-deps
+          playwright install --with-deps chromium
 
-      - name: Run Behave Tests
+      - name: Execute Tests
         run: |
           behave \
-            -f allure_behave.formatter:AllureFormatter \
-            -o allure-results
+          -f allure_behave.formatter:AllureFormatter \
+          -o allure-results
+
+      - name: Install Allure
+        run: |
+          wget https://github.com/allure-framework/allure2/releases/download/2.34.1/allure-2.34.1.tgz
+          tar -zxvf allure-2.34.1.tgz
+          sudo mv allure-2.34.1 /opt/allure
+          sudo ln -s /opt/allure/bin/allure /usr/bin/allure
 
       - name: Generate Allure Report
         if: always()
-        uses: simple-elf/allure-report-action@v1.9
-        with:
-          allure_results: allure-results
-          allure_report: allure-report
-          gh_pages: gh-pages
+        run: |
+          allure generate allure-results --clean -o allure-report
 
-      - name: Upload Allure Report Artifact
+      - name: Upload Allure Report
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: allure-report
           path: allure-report
+
+      - name: Upload Allure Results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: allure-results
+          path: allure-results
 
       - name: Upload Evidences
         if: always()
@@ -79,19 +96,22 @@ jobs:
           path: evidencias
           if-no-files-found: ignore
 
-      - name: Setup GitHub Pages
+      - name: Configure GitHub Pages
         if: always()
         uses: actions/configure-pages@v5
 
-      - name: Upload Pages Artifact
+      - name: Upload GitHub Pages Artifact
         if: always()
         uses: actions/upload-pages-artifact@v3
         with:
           path: allure-report
 
   deploy:
+
+    needs: e2e
+
     if: always()
-    needs: tests
+
     runs-on: ubuntu-latest
 
     environment:
@@ -103,6 +123,7 @@ jobs:
       id-token: write
 
     steps:
-      - name: Deploy to GitHub Pages
+
+      - name: Deploy
         id: deployment
         uses: actions/deploy-pages@v4
