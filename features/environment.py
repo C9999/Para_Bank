@@ -5,7 +5,7 @@ def before_all(context):
     context.playwright = sync_playwright().start()
 
     context.browser = context.playwright.chromium.launch(
-        headless=False,
+        headless=True,
         slow_mo=700
     )
 
