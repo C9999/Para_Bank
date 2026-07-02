@@ -57,10 +57,13 @@ jobs:
           playwright install --with-deps chromium
 
       - name: Execute Tests
+        env:
+          HEADLESS: true
+          SLOW_MO: 0
         run: |
           behave \
-          -f allure_behave.formatter:AllureFormatter \
-          -o allure-results
+            -f allure_behave.formatter:AllureFormatter \
+            -o allure-results
 
       - name: Install Allure
         run: |
